@@ -40,7 +40,7 @@ namespace NWaves.Transforms
         private readonly double[] _ar, _br, _ai, _bi;
 
         // Internal buffers
-        
+
         private readonly double[] _re;
         private readonly double[] _im;
 
@@ -79,10 +79,10 @@ namespace NWaves.Transforms
 
             for (var i = 0; i < _fftSize; i++)
             {
-                _ar[i] =  0.5 * (1 - Math.Sin(f * i));
+                _ar[i] = 0.5 * (1 - Math.Sin(f * i));
                 _ai[i] = -0.5 * Math.Cos(f * i);
-                _br[i] =  0.5 * (1 + Math.Sin(f * i));
-                _bi[i] =  0.5 * Math.Cos(f * i);
+                _br[i] = 0.5 * (1 + Math.Sin(f * i));
+                _bi[i] = 0.5 * Math.Cos(f * i);
             }
         }
 
@@ -400,6 +400,84 @@ namespace NWaves.Transforms
             InverseNorm(inRe, inIm, outRe);
         }
 
+        /// <summary>
+        /// <para>Computes magnitude spectrum from samples:</para>
+        /// <code>
+        ///     spectrum = sqrt(re * re + im * im)
+        /// </code>
+        /// <para>Method fills array spectrum. It must have size at least fftSize/2+1.</para>
+        /// </summary>
+        /// <param name="samples">Array of samples</param>
+        /// <param name="spectrum">Magnitude spectrum</param>
+        /// <param name="normalize">Normalize by FFT size or not</param>
+        public void MagnitudeSpectrum(double[] samples, double[] spectrum, bool normalize = false)
+        {
+            // Perform FFT using existing Direct method
+            Direct(samples, _re, _im);
+
+            var n = _fftSize;
+
+            if (normalize)
+            {
+                spectrum[0] = Math.Abs(_re[0]) / (_fftSize * 2);
+                spectrum[n] = Math.Abs(_re[n]) / (_fftSize * 2);
+
+                for (var i = 1; i < n; i++)
+                {
+                    spectrum[i] = Math.Sqrt(_re[i] * _re[i] + _im[i] * _im[i]) / (_fftSize * 2);
+                }
+            }
+            else
+            {
+                spectrum[0] = Math.Abs(_re[0]);
+                spectrum[n] = Math.Abs(_re[n]);
+
+                for (var i = 1; i < n; i++)
+                {
+                    spectrum[i] = Math.Sqrt(_re[i] * _re[i] + _im[i] * _im[i]);
+                }
+            }
+        }
+
+        /// <summary>
+        /// <para>Computes power spectrum from samples:</para>
+        /// <code>
+        ///     spectrum = (re * re + im * im)
+        /// </code>
+        /// <para>Method fills array spectrum. It must have size at least fftSize/2+1.</para>
+        /// </summary>
+        /// <param name="samples">Array of samples</param>
+        /// <param name="spectrum">Power spectrum</param>
+        /// <param name="normalize">Normalize by FFT size or not</param>
+        public void PowerSpectrum(double[] samples, double[] spectrum, bool normalize = true)
+        {
+            // Perform FFT using existing Direct method
+            Direct(samples, _re, _im);
+
+            var n = _fftSize;
+
+            if (normalize)
+            {
+                spectrum[0] = _re[0] * _re[0] / (_fftSize * 2);
+                spectrum[n] = _re[n] * _re[n] / (_fftSize * 2);
+
+                for (var i = 1; i < n; i++)
+                {
+                    spectrum[i] = (_re[i] * _re[i] + _im[i] * _im[i]) / (_fftSize * 2);
+                }
+            }
+            else
+            {
+                spectrum[0] = _re[0] * _re[0];
+                spectrum[n] = _re[n] * _re[n];
+
+                for (var i = 1; i < n; i++)
+                {
+                    spectrum[i] = _re[i] * _re[i] + _im[i] * _im[i];
+                }
+            }
+        }
+
 #if NET50
         /// <summary>
         /// <para>
@@ -648,6 +726,65 @@ namespace NWaves.Transforms
             {
                 output[k++] = _re[i] / _fftSize;
                 output[k++] = _im[i] / _fftSize;
+            }
+        }
+
+        // Span-based versions of the spectrum methods
+        public void MagnitudeSpectrum(ReadOnlySpan<double> samples, Span<double> spectrum, bool normalize = false)
+        {
+            // Perform FFT using existing Direct method
+            Direct(samples, new Span<double>(_re), new Span<double>(_im));
+
+            var n = _fftSize;
+
+            if (normalize)
+            {
+                spectrum[0] = Math.Abs(_re[0]) / (_fftSize * 2);
+                spectrum[n] = Math.Abs(_re[n]) / (_fftSize * 2);
+
+                for (var i = 1; i < n; i++)
+                {
+                    spectrum[i] = Math.Sqrt(_re[i] * _re[i] + _im[i] * _im[i]) / (_fftSize * 2);
+                }
+            }
+            else
+            {
+                spectrum[0] = Math.Abs(_re[0]);
+                spectrum[n] = Math.Abs(_re[n]);
+
+                for (var i = 1; i < n; i++)
+                {
+                    spectrum[i] = Math.Sqrt(_re[i] * _re[i] + _im[i] * _im[i]);
+                }
+            }
+        }
+
+        public void PowerSpectrum(ReadOnlySpan<double> samples, Span<double> spectrum, bool normalize = true)
+        {
+            // Perform FFT using existing Direct method
+            Direct(samples, new Span<double>(_re), new Span<double>(_im));
+
+            var n = _fftSize;
+
+            if (normalize)
+            {
+                spectrum[0] = _re[0] * _re[0] / (_fftSize * 2);
+                spectrum[n] = _re[n] * _re[n] / (_fftSize * 2);
+
+                for (var i = 1; i < n; i++)
+                {
+                    spectrum[i] = (_re[i] * _re[i] + _im[i] * _im[i]) / (_fftSize * 2);
+                }
+            }
+            else
+            {
+                spectrum[0] = _re[0] * _re[0];
+                spectrum[n] = _re[n] * _re[n];
+
+                for (var i = 1; i < n; i++)
+                {
+                    spectrum[i] = _re[i] * _re[i] + _im[i] * _im[i];
+                }
             }
         }
 #endif
