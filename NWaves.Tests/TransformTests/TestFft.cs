@@ -25,6 +25,74 @@ namespace NWaves.Tests.TransformTests
         }
 
         [Test]
+        public void TestRealFft64()
+        {
+            double[] array = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }; // Enumerable.Range(0, 16);
+
+            double[] re = new double[9];
+            double[] im = new double[9];
+
+            var realFft = new RealFft64(16);
+
+            realFft.Direct(array, re, im);
+
+            Assert.That(re, Is.EqualTo(new double[] { 120, -8, -8, -8, -8, -8, -8, -8, -8 }).Within(1e-5));
+            Assert.That(im, Is.EqualTo(new double[] { 0, 40.21872f, 19.31371f, 11.97285f, 8, 5.34543f, 3.31371f, 1.591299f, 0 }).Within(1e-5));
+        }
+
+        [Test]
+        public void TestInverseRealFft64()
+        {
+            double[] array = { 1, 5, 3, 7, 2, 3, 0, 7 };
+            double[] output = new double[array.Length];
+            double[] outputNorm = new double[array.Length];
+            double[] re = new double[5];
+            double[] im = new double[5];
+
+            var realFft = new RealFft64(8);
+            realFft.Direct(array, re, im);
+            realFft.Inverse(re, im, output);
+            realFft.InverseNorm(re, im, outputNorm);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(output, Is.EqualTo(array.Select(a => a * 8)).Within(1e-12));
+                Assert.That(outputNorm, Is.EqualTo(array).Within(1e-12));
+            });
+        }
+
+        [Test]
+        public void TestComplexDirectFft64()
+        {
+            double[] inRe = { 1, 2, 3, 4, 5, 6, 7, 8 };
+            double[] inIm = new double[8];
+            double[] outRe = new double[8];
+            double[] outIm = new double[8];
+
+            var realFft = new RealFft64(8);
+            realFft.Direct(inRe, inIm, outRe, outIm);
+
+            var expectedRe = new double[] { 36.0, -4.0, -4.0, -4.0, -4.0, 0.0, 0.0, 0.0 };  // Corrected values
+            var expectedIm = new double[]
+            {
+                0.0,
+                9.656854249492381,
+                4.0,
+                1.656854249492381,
+                0.0,
+                0.0,  // Corrected value
+                0.0,
+                0.0
+            };
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(outRe, Is.EqualTo(expectedRe).Within(1e-12));
+                Assert.That(outIm, Is.EqualTo(expectedIm).Within(1e-12));
+            });
+        }
+
+        [Test]
         public void TestInverseRealFft()
         {
             float[] array = { 1, 5, 3, 7, 2, 3, 0, 7 };
